@@ -3,7 +3,7 @@ from .collection import Collection
 from .manager import CollectionManager
 from .types import CollectionConfig
 
-class VecTorch:
+class Vectorch:
     
     def __init__(self, path: str | Path):
         self._path = Path(path)
@@ -16,7 +16,7 @@ class VecTorch:
                                   metric=metric,
                                   index_type=index)
         
-        return self._manager.create_collection(config)
+        return self._manager.create(config)
     
     def get_collection(self, name: str) -> Collection:
         return self._manager.get(name)

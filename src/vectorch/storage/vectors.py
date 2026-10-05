@@ -19,6 +19,9 @@ class VectorStorage:
             (initial_capacity, dimension), dtype=np.float32
         ) # np.empty because we will fill it with data later, and we don't want to initialize it with zeros.
 
+    def view(self) -> NDArray[np.float32]:
+        return self._data[:self._size]
+
     def append(self, vector: NDArray[np.float32]) -> int:
         
         self._validate_vector(vector)

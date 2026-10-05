@@ -19,7 +19,7 @@ class IDMap:
         
         internal_id = len(self._external_to_internal)
         self._external_to_internal[external_id] = internal_id
-        self._internal_to_external[internal_id] = external_id
+        self._internal_to_external.append(external_id)
         return internal_id
     
     def internal(self, external_id: str | int) -> int:

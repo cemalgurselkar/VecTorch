@@ -2,6 +2,7 @@ from pathlib import Path
 from .collection import Collection
 from .types import CollectionConfig
 
+
 class CollectionManager:
     def __init__(self, root_path:str | Path):
         self._collection: dict[str, Collection] = {}
