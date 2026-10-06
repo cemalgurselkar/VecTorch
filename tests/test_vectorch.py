@@ -1,7 +1,8 @@
 import numpy as np
+import pytest
 
 from vectorch import Vectorch
-import pytest
+
 
 def test_end_to_end(tmp_path):
     db = Vectorch(tmp_path)

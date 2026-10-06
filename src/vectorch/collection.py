@@ -3,10 +3,11 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from .types import CollectionConfig, SearchResult, IndexType
-from .storage.engine import StorageEngine
-from .kernels.numpy import NumpyKernel
 from .index.flat import FlatIndex
+from .kernels.numpy import NumpyKernel
+from .storage.engine import StorageEngine
+from .types import CollectionConfig, IndexType, SearchResult
+from .validation import validate_vector
 
 
 class Collection:
@@ -45,23 +46,16 @@ class Collection:
     def config(self) -> CollectionConfig:
         return self._config
 
-    def add(
-        self,
-        external_id: str | int,
-        vector: NDArray[np.float32],
-        metadata: dict[str, Any] | None = None,
-    ) -> int:
+    def add(self, external_id: str | int, vector: NDArray[np.float32], metadata: dict[str, Any] | None = None) -> int:
+        vector = validate_vector(vector, dimension=self._config.dimension, name="vector")
         return self._storage.add(
             external_id=external_id,
             vector=vector,
             metadata=metadata,
         )
 
-    def search(
-        self,
-        query: NDArray[np.float32],
-        k: int = 10,
-    ) -> list[SearchResult]:
+    def search(self,query: NDArray[np.float32],k: int = 10) -> list[SearchResult]:
+        query = validate_vector(query, dimension=self._config.dimension, name="query")
         internal_ids, scores = self._index.search(query, k)
 
         results: list[SearchResult] = []

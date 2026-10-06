@@ -1,5 +1,6 @@
 from typing import Any
 
+
 class MetadataStorage:
     def __init__(self) -> None:
         self._data: dict[int, dict[str, Any]] = {}

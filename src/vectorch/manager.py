@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from .collection import Collection
 from .types import CollectionConfig
 

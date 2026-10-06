@@ -6,10 +6,10 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from .vectors import VectorStorage
+from .deleted import DeleteBitmap
 from .ids import IDMap
 from .metadata import MetadataStorage
-from .deleted import DeleteBitmap
+from .vectors import VectorStorage
 
 
 class StorageEngine:
@@ -39,7 +39,7 @@ class StorageEngine:
     def get_metadata(self, internal_id) -> dict[str, Any]:
         return self._metadata.get(internal_id)
     
-    def get_vector(self, internal_id) -> dict[str, Any]:
+    def get_vector(self, internal_id) -> NDArray[np.float32]:
         return self._vectors.get(internal_id)
     
     def get_external_id(self, internal_id) -> str | int:

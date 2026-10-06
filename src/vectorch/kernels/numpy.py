@@ -1,8 +1,9 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from .base import DistanceKernel
 from ..types import Metric
+from .base import DistanceKernel
+
 
 class NumpyKernel(DistanceKernel):
     def __init__(self, metric: Metric) -> None:

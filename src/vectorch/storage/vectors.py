@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
+
 class VectorStorage:
     
     def __init__(self, dimension: int, initial_capacity: int = 10024) -> None:

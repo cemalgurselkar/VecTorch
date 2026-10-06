@@ -1,7 +1,9 @@
 from pathlib import Path
+
 from .collection import Collection
 from .manager import CollectionManager
-from .types import CollectionConfig
+from .types import CollectionConfig, IndexType, Metric
+
 
 class Vectorch:
     
@@ -9,12 +11,21 @@ class Vectorch:
         self._path = Path(path)
         self._manager = CollectionManager(self._path)
     
-    def create_collection(self, name: str, dimension: int, metric: str ="cosine", index: str = "flat") -> Collection:
+    def create_collection(self, name: str, dimension: int, metric: str | Metric = Metric.COSINE, index: str | IndexType = IndexType.FLAT) -> Collection:
+        try:
+            normalized_metric = Metric(metric)
+        except ValueError as exc:
+            raise ValueError(f"Invalid metric '{metric}'") from exc
+        
+        try:
+            normalized_index = IndexType(index)
+        except ValueError as exc:
+            raise ValueError(f"Invalid index '{index}'") from exc
         
         config = CollectionConfig(name=name,
                                   dimension=dimension,
-                                  metric=metric,
-                                  index_type=index)
+                                  metric=normalized_metric,
+                                  index_type=normalized_index)
         
         return self._manager.create(config)
     
@@ -24,7 +35,7 @@ class Vectorch:
     def drop_collection(self, name: str) -> None:
         self._manager.drop(name)
     
-    def list_collection(self) -> list[str]:
+    def list_collections(self) -> list[str]:
         return self._manager.list()
     
     def close(self) -> None:

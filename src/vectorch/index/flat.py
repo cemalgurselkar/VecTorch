@@ -1,11 +1,12 @@
-import numpy as np
-from numpy.typing import NDArray
 from collections.abc import Callable
 
-from .base import Index
-from ..storage.vectors import VectorStorage
+import numpy as np
+from numpy.typing import NDArray
+
 from ..kernels.base import DistanceKernel
+from ..storage.vectors import VectorStorage
 from ..types import Metric
+from .base import Index
 
 
 class FlatIndex(Index):
