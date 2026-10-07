@@ -14,14 +14,11 @@ class Collection:
     def __init__(self, config: CollectionConfig) -> None:
         self._config = config
 
-        self._storage = StorageEngine(
-            dimension=config.dimension
-        )
+        self._storage = StorageEngine(dimension=config.dimension)
+        self._kernel = NumpyKernel(metric=config.metric)
 
-        self._kernel = NumpyKernel(
-            metric=config.metric
-        )
-
+        self._closed = False
+        
         if config.index_type == IndexType.FLAT:
             self._index = FlatIndex(
                 vectors=self._storage.vectors,
@@ -47,6 +44,7 @@ class Collection:
         return self._config
 
     def add(self, external_id: str | int, vector: NDArray[np.float32], metadata: dict[str, Any] | None = None) -> int:
+        self._ensure_open()
         vector = validate_vector(vector, dimension=self._config.dimension, name="vector")
         return self._storage.add(
             external_id=external_id,
@@ -55,6 +53,14 @@ class Collection:
         )
 
     def search(self,query: NDArray[np.float32],k: int = 10) -> list[SearchResult]:
+        
+        if isinstance(k, bool) or not isinstance(k, int):
+            raise TypeError(f"k must be an integer, but is {type(k)}")
+        
+        if k <= 0:
+            raise ValueError(f"k must be greater than 0, but is {k}")
+        
+        self._ensure_open()
         query = validate_vector(query, dimension=self._config.dimension, name="query")
         internal_ids, scores = self._index.search(query, k)
 
@@ -78,10 +84,9 @@ class Collection:
 
         return results
 
-    def get(
-        self,
-        external_id: str | int,
-    ) -> NDArray[np.float32]:
+    def get(self,external_id: str | int) -> NDArray[np.float32]:
+        
+        self._ensure_open()
         internal_id = self._storage.get_internal_id(external_id)
 
         if self._storage.is_deleted(internal_id):
@@ -89,16 +94,25 @@ class Collection:
                 f"ID '{external_id}' has been deleted."
             )
 
-        return self._storage.get_vector(internal_id)
+        return self._storage.get_vector(internal_id).copy()
 
-    def delete(
-        self,
-        external_id: str | int,
-    ) -> None:
+    def delete(self,external_id: str | int) -> None:
+        self._ensure_open()
         self._storage.delete(external_id)
 
     def count(self) -> int:
-        return len(self._storage)
+        self._ensure_open()
+        return self._storage.count()
+
+    def total_count(self) -> int:
+        self._ensure_open()
+        return self._storage.total_count()
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("Collection is closed")
 
     def close(self) -> None:
-        pass
+        if self._closed:
+            return
+        self._closed = True

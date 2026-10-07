@@ -17,9 +17,10 @@ class StorageEngine:
     def __init__(self, dimension: int, initial_capacity: int = 1024) -> None:
         self._vectors = VectorStorage(dimension, initial_capacity)
         
+        # HAS A ilişkisi kurduk burada.
         self._ids = IDMap()
         self._metadata = MetadataStorage()
-        self._delete = DeleteBitmap(initial_capacity)
+        self._deleted = DeleteBitmap(initial_capacity)
     
     def add(self, external_id, vector, metadata: dict[str, Any] | None = None) -> int:
         if self._ids.contains(external_id):
@@ -36,6 +37,12 @@ class StorageEngine:
             
         return internal_id
     
+    def count(self) -> int:
+        return len(self._vectors) - self._deleted.count()
+    
+    def total_count(self) -> int:
+        return len(self._vectors)
+    
     def get_metadata(self, internal_id) -> dict[str, Any]:
         return self._metadata.get(internal_id)
     
@@ -50,13 +57,13 @@ class StorageEngine:
     
     def delete(self, external_id) -> None:
         internal_id = self._ids.internal(external_id)
-        self._delete.mark(internal_id)
+        self._deleted.mark(internal_id)
     
     def is_deleted(self, internal_id) -> bool:
-        return self._delete.contains(internal_id)
+        return self._deleted.contains(internal_id)
     
     def deleted_mask(self) -> NDArray[np.bool_]:
-        return self._delete.view(len(self._vectors))
+        return self._deleted.view(len(self._vectors))
     
     def __len__(self) -> int:
         return len(self._vectors)

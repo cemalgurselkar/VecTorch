@@ -27,23 +27,25 @@ class DeleteBitmap:
 
         self._capacity = initial_capacity
 
-        self._deleted: NDArray[np.bool_] = np.zeros(
-            initial_capacity,
-            dtype=np.bool_,
-        )
-
+        self._deleted: NDArray[np.bool_] = np.zeros(initial_capacity, dtype=np.bool_,)
+        self._deleted_count = 0
+        
     def mark(self, internal_id: int) -> None:
         if internal_id < 0:
             raise ValueError("internal_id cannot be negative")
 
         self._ensure_capacity(internal_id)
-        self._deleted[internal_id] = True
+        if not self._deleted[internal_id]:
+            self._deleted[internal_id] = True
+            self._deleted_count += 1
 
     def unmark(self, internal_id: int) -> None:
         if internal_id < 0 or internal_id >= self._capacity:
             raise IndexError("internal_id out of range")
 
-        self._deleted[internal_id] = False
+        if self._deleted[internal_id]:
+            self._deleted[internal_id] = False
+            self._deleted_count -= 1
 
     def contains(self, internal_id: int) -> bool:
         if internal_id < 0 or internal_id >= self._capacity:
@@ -51,8 +53,12 @@ class DeleteBitmap:
 
         return bool(self._deleted[internal_id])
 
+    def count(self) -> int:
+        return self._deleted_count
+
     def clear(self) -> None:
         self._deleted.fill(False)
+        self._deleted_count = 0
 
     def view(self, size: int) -> NDArray[np.bool_]:
         if size < 0:
