@@ -1,3 +1,5 @@
+import json
+import math
 from collections.abc import Sequence
 from typing import Any, Protocol, TypeGuard
 
@@ -24,6 +26,86 @@ class _TorchTensor(Protocol):
         ...
 
 vector_input = NDArray[Any] | Sequence[float] | Any
+
+_INT64_MIN = -(2**63)
+_INT64_MAX = 2**63 - 1
+
+
+def validate_collection_name(name: object) -> str:
+    if not isinstance(name, str) or not name:
+        raise ValueError("Collection name must be a non-empty string")
+
+    if name in {".", ".."} or "/" in name or "\\" in name:
+        raise ValueError(f"Invalid collection name: {name!r}")
+
+    return name
+
+
+def validate_external_id(external_id: object) -> str | int:
+    if isinstance(external_id, bool) or not isinstance(external_id, (str, int)):
+        raise TypeError("External ID must be a string or integer")
+
+    if isinstance(external_id, int) and not (
+        _INT64_MIN <= external_id <= _INT64_MAX
+    ):
+        raise ValueError("Integer external ID must fit signed int64")
+
+    return external_id
+
+
+def validate_metadata(metadata: object) -> dict[str, Any] | None:
+    if metadata is None:
+        return None
+
+    if not isinstance(metadata, dict):
+        raise TypeError("Metadata must be a dictionary or None")
+
+    try:
+        _validate_json_value(metadata, active_containers=set())
+        json.dumps(metadata, ensure_ascii=False, allow_nan=False).encode("utf-8")
+    except (
+        OverflowError,
+        RecursionError,
+        TypeError,
+        UnicodeEncodeError,
+        ValueError,
+    ) as exc:
+        raise ValueError("Metadata must be JSON-compatible") from exc
+
+    return metadata
+
+
+def _validate_json_value(value: object, active_containers: set[int]) -> None:
+    if value is None or isinstance(value, (bool, int, str)):
+        return
+
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("Metadata numbers must be finite")
+        return
+
+    if isinstance(value, (list, dict)):
+        identity = id(value)
+        if identity in active_containers:
+            raise ValueError("Metadata cannot contain cycles")
+
+        active_containers.add(identity)
+        try:
+            if isinstance(value, list):
+                for item in value:
+                    _validate_json_value(item, active_containers)
+            else:
+                for key, item in value.items():
+                    if not isinstance(key, str):
+                        raise TypeError("Metadata object keys must be strings")
+                    _validate_json_value(item, active_containers)
+        finally:
+            active_containers.remove(identity)
+        return
+
+    raise ValueError(
+        f"Unsupported metadata value type: {type(value).__name__}"
+    )
 
 def validate_vector(vector: vector_input, *, dimension: int, name: str = "vector") -> NDArray[np.float32]:
     """

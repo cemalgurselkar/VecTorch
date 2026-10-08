@@ -4,9 +4,47 @@ __pycache__/
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
 # Virtual environments
-.venv
+.venv/
 
+# Test, type-check, lint, and coverage caches
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.benchmarks/
+
+# Generated benchmark artifacts
+benchmarks/results/**
+!benchmarks/results/.gitkeep
+benchmarks/profiles/**
+!benchmarks/profiles/.gitkeep
+
+# Local design notes not intended for publication
 docs_md/
+
+# Local databases and runtime output
+vectorch-data/
+.vectorch/
+*.vectorch/
+*.db/
+*.log
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Editor, OS, and local agent artifacts
+.idea/
+.vscode/
+.agents/
+.codex/
+.DS_Store
+Thumbs.db
+*.swp
+*~

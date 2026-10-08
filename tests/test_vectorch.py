@@ -279,3 +279,75 @@ def test_cosine_zero_vector_score_is_zero(tmp_path):
     assert len(results) == 1
     assert results[0].id == "zero"
     assert results[0].score == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["", ".", "..", "../outside", "a/b", "a\\b"],
+)
+def test_rejects_collection_names_unsafe_for_filesystem(tmp_path, name):
+    db = Vectorch(tmp_path)
+
+    with pytest.raises(ValueError):
+        db.create_collection(name, dimension=2)
+
+
+@pytest.mark.parametrize("external_id", [True, False, 2**63, -(2**63) - 1])
+def test_rejects_external_ids_not_supported_by_disk_format(
+    tmp_path,
+    external_id,
+):
+    db = Vectorch(tmp_path)
+    collection = db.create_collection("test", dimension=2)
+
+    with pytest.raises((TypeError, ValueError)):
+        collection.add(external_id, [1.0, 0.0])
+
+    assert collection.count() == 0
+
+
+def test_boolean_id_cannot_alias_an_integer_id(tmp_path):
+    db = Vectorch(tmp_path)
+    collection = db.create_collection("test", dimension=2)
+    collection.add(1, [1.0, 0.0])
+
+    with pytest.raises(TypeError):
+        collection.get(True)
+
+    with pytest.raises(TypeError):
+        collection.delete(True)
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"value": float("nan")},
+        {"value": float("inf")},
+        {"value": object()},
+        {1: "non-string-key"},
+        {"tuple": (1, 2)},
+    ],
+)
+def test_rejects_metadata_not_preserved_by_json_round_trip(
+    tmp_path,
+    metadata,
+):
+    db = Vectorch(tmp_path)
+    collection = db.create_collection("test", dimension=2)
+
+    with pytest.raises(ValueError, match="JSON-compatible"):
+        collection.add("a", [1.0, 0.0], metadata)
+
+    assert collection.count() == 0
+
+
+def test_rejects_cyclic_metadata(tmp_path):
+    db = Vectorch(tmp_path)
+    collection = db.create_collection("test", dimension=2)
+    metadata = {}
+    metadata["self"] = metadata
+
+    with pytest.raises(ValueError, match="JSON-compatible"):
+        collection.add("a", [1.0, 0.0], metadata)
+
+    assert collection.count() == 0

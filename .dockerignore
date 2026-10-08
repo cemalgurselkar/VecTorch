@@ -1,0 +1,15 @@
+# Keep the build context closed by default. Only files used by the Dockerfile
+# are allowed below, so new local artifacts cannot leak into the image context.
+**
+
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!README.md
+!LICENSE
+
+!src/
+!src/**
+
+!examples/
+!examples/**

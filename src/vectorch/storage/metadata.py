@@ -12,11 +12,12 @@ class MetadataStorage:
         
         self._data[internal_id] = deepcopy(metadata)
     
-    def get(self, internal_id: int) -> dict[str, Any]:
-        metadata = self._data.get(internal_id, {})
+    def get(self, internal_id: int) -> dict[str, Any] | None:
+        metadata = self._data.get(internal_id)
         
         if metadata is None:
             return None
+
         return deepcopy(metadata)
     
     def get_many(self, internal_ids: list[int]) -> list[dict[str, Any] | None]:

@@ -5,19 +5,33 @@ from numpy.typing import NDArray
 
 from .index.flat import FlatIndex
 from .kernels.numpy import NumpyKernel
-from .storage.engine import StorageEngine
+from .persistence.manager import PersistenceManager
+from .storage.engine import StorageEngine, StorageSnapshot
 from .types import CollectionConfig, IndexType, SearchResult
 from .validation import validate_vector
 
 
 class Collection:
-    def __init__(self, config: CollectionConfig) -> None:
+    def __init__(
+        self,
+        config: CollectionConfig,
+        persistence: PersistenceManager,
+        *,
+        storage: StorageEngine | None = None,
+        dirty: bool = True,
+    ) -> None:
         self._config = config
+        self._persistence = persistence
 
-        self._storage = StorageEngine(dimension=config.dimension)
+        self._storage = (
+            storage
+            if storage is not None
+            else StorageEngine(dimension=config.dimension)
+        )
         self._kernel = NumpyKernel(metric=config.metric)
 
         self._closed = False
+        self._dirty = dirty
         
         if config.index_type == IndexType.FLAT:
             self._index = FlatIndex(
@@ -30,6 +44,24 @@ class Collection:
             raise NotImplementedError(
                 f"Index type '{config.index_type}' is not implemented."
             )
+
+    @classmethod
+    def from_snapshot(
+        cls,
+        config: CollectionConfig,
+        snapshot: StorageSnapshot,
+        persistence: PersistenceManager,
+    ) -> "Collection":
+        storage = StorageEngine.from_snapshot(
+            dimension=config.dimension,
+            snapshot=snapshot,
+        )
+        return cls(
+            config=config,
+            persistence=persistence,
+            storage=storage,
+            dirty=False,
+        )
 
     @property
     def name(self) -> str:
@@ -46,11 +78,13 @@ class Collection:
     def add(self, external_id: str | int, vector: NDArray[np.float32], metadata: dict[str, Any] | None = None) -> int:
         self._ensure_open()
         vector = validate_vector(vector, dimension=self._config.dimension, name="vector")
-        return self._storage.add(
+        internal_id = self._storage.add(
             external_id=external_id,
             vector=vector,
             metadata=metadata,
         )
+        self._dirty = True
+        return internal_id
 
     def search(self,query: NDArray[np.float32],k: int = 10) -> list[SearchResult]:
         
@@ -69,8 +103,6 @@ class Collection:
         for internal_id, score in zip(internal_ids, scores):
             iid = int(internal_id)
 
-            # TODO(perf/correctness):
-            # Deleted IDs should be filtered before top-k selection.
             if self._storage.is_deleted(iid):
                 continue
 
@@ -98,7 +130,8 @@ class Collection:
 
     def delete(self,external_id: str | int) -> None:
         self._ensure_open()
-        self._storage.delete(external_id)
+        if self._storage.delete(external_id):
+            self._dirty = True
 
     def count(self) -> int:
         self._ensure_open()
@@ -108,6 +141,18 @@ class Collection:
         self._ensure_open()
         return self._storage.total_count()
 
+    def save(self) -> None:
+        self._ensure_open()
+
+        if not self._dirty:
+            return
+
+        self._persistence.save_collection(
+            self._config,
+            self._storage.snapshot(),
+        )
+        self._dirty = False
+
     def _ensure_open(self) -> None:
         if self._closed:
             raise RuntimeError("Collection is closed")
@@ -115,4 +160,6 @@ class Collection:
     def close(self) -> None:
         if self._closed:
             return
+
+        self.save()
         self._closed = True

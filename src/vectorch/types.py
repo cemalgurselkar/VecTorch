@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from .validation import validate_collection_name
+
 
 class Metric(str, Enum):
     COSINE = "cosine"
@@ -24,8 +26,10 @@ class CollectionConfig:
     index_params: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not self.name:
-            raise ValueError("Collection name cannot be empty.")
+        validate_collection_name(self.name)
+
+        if isinstance(self.dimension, bool) or not isinstance(self.dimension, int):
+            raise TypeError("Dimension must be an integer.")
 
         if self.dimension <= 0:
             raise ValueError("Dimension must be greater than 0.")
